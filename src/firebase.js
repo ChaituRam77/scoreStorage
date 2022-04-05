@@ -5,6 +5,7 @@ import { getFirestore, collection, onSnapshot,
   addDoc, deleteDoc, doc, getDocs, updateDoc, setDoc,SetOptions } from "firebase/firestore";
 import { ref, onUnmounted } from 'vue'
 
+
 const firebaseConfig = {
     apiKey: "AIzaSyCkmxCvw2Pe3ASRCBSgcKwXfwqOtOW3Hi4",
     authDomain: "cricketscoredb.firebaseapp.com",
@@ -98,7 +99,7 @@ getDocs(usersCollection).then((snapshot)=>{
   //   console.error(error);
   // });
  
-console.log('start')
+  console.log('start')
   const matchScore = {
     "scorecard": [{
       "inningsId": 1,
@@ -463,23 +464,33 @@ console.log('start')
     console.log(matchNm)
 
     let playersScore = new Map();
+    let playersNickName = new Map();
+    
+    let playersCatchingStumping = new Map();
+    let playersRunOuts = new Map();
 
     Object.entries(matchScore.scorecard).forEach(item => {
       console.log('inside', item.length)
       
       if(item.batsman !== null){
         Object.entries(item[1].batsman).forEach(batsman => {
+          // console.log(batsman[1])
           playersScore.set(batsman[1].name,[getValidScore(batsman[1].runs),getValidScore(batsman[1].sixes),getValidScore(batsman[1].fours)])
+          // console.log('NickName :'+batsman[1].nickName)
+          if(batsman[1].nickName !== undefined){
+            playersNickName.set(batsman[1].nickName,batsman[1].Name)
+          }          
+          addOutDescrition(batsman[1].outDec)
+          // console.log((batsman[1].outDec))
       })
       }else{
         console.log(item)
       }
     })
 
-    // console.log(playersScore)
-    addFieldsToDocInDB(matchNm, '1Total')
+    // addFieldsToDocInDB(matchNm, '1Total')
     playersScore.forEach((values,keys)=>{
-      writeMatchScoreToDB(matchNm, keys, values)
+      // writeMatchScoreToDB(matchNm, keys, values)
     })
 
   }
@@ -487,7 +498,42 @@ console.log('start')
   function getValidScore(value) {
     return (value == undefined ? '0' : value);
   }
-  
+
+  function addOutDescrition(outDesc){
+    /**
+     * To Do :
+     * c player b player 
+     * c & b player
+     * run direct hit & different players
+     * lbw
+     * stumping
+     * hit wicket
+     */
+    let playersBowling = new Map();
+
+    if(outDesc !== undefined && outDesc !== 'not out'){  
+      const od = ""+ outDesc
+      console.log(od)
+      if(od.indexOf(' b ') !== -1 && od.indexOf('c ') !== -1){
+        const bowler = od.substring(od.indexOf(' b ')+3,od.length)
+        console.log('Bowling: '+bowler)
+        increamentMapValue(this.playersBowling,bowler)
+      }
+    }
+  }
+  function increamentMapValue(m, key){
+    if(m.has(key)){
+      console.log('inside map '+ m.get(key))
+      m.set(key,m.get(key) + 1)
+    }else if(m.size == 0){
+      console.log('inside mapelseif '+ m.get(key))
+      m.set(key, 1)
+      console.log('size : '+m.size)
+    }else{
+      console.log('inside map else')
+      m.set(key, 1)
+    }
+  }
   function writeMatchScoreToDB(match,playerName,values){
     const docRef = doc(db,'Owners','Bala')
     setDoc(docRef,{
@@ -504,9 +550,9 @@ console.log('start')
 
   function addFieldsToDocInDB(fieldName, fieldValue){
     const docRef = doc(db,'Owners','Bala')
-    updateDoc(docRef, {
+    setDoc(docRef, {
         [fieldName] :{
-          [fieldValue] : '0'
+          [fieldValue] : 0
         }
       }).catch(err=>{
           console.log('error: '+err.message)
